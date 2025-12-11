@@ -200,16 +200,22 @@ LOGGING = {
     },
 }
 
-# Model selection and sequence length
-RERANKER_MODEL_NAME = os.getenv("RERANKER_MODEL_NAME", "cross-encoder/ms-marco-MiniLM-L-6-v2")
-RERANKER_MAX_SEQUENCE_LENGTH = os.getenv("RERANKER_MAX_SEQUENCE_LENGTH", 512)
+# OpenAI API Configuration
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+OPENAI_EMBEDDING_DIMENSIONS = int(os.getenv("OPENAI_EMBEDDING_DIMENSIONS", "1536"))
+OPENAI_CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+OPENAI_POWERFUL_MODEL = os.getenv("OPENAI_POWERFUL_MODEL", "gpt-4o")
 
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
-EMBEDDING_BATCH_SIZE = os.getenv("EMBEDDING_BATCH_SIZE", 32)
-
-INSTANT_LLM = os.getenv("INSTANT_LLM", "llama-3.1-8b-instant")
-POWERFUL_LLM = os.getenv("POWERFUL_LLM", "qwen-qwq-32b")
+# Batch sizes for API calls
+EMBEDDING_BATCH_SIZE = int(os.getenv("EMBEDDING_BATCH_SIZE", "100"))
+RERANKING_BATCH_SIZE = int(os.getenv("RERANKING_BATCH_SIZE", "20"))
 
 CHECKPOINT_TABLES = ["checkpoint_blobs", "checkpoint_writes", "checkpoints"]
 
 SCRAPER_WORKERS_NUM = os.getenv("SCRAPER_WORKERS_NUM", os.cpu_count())
+
+# LangSmith Configuration (optional)
+LANGSMITH_TRACING = os.getenv("LANGSMITH_TRACING", "false").lower() in ("true", "1", "yes")
+LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY", "")
+LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT", "YT Navigator")

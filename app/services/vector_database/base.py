@@ -16,12 +16,11 @@ from typing import (
 )
 
 import structlog
-import torch
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents.base import Document
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_postgres.vectorstores import PGVector
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -60,16 +59,13 @@ class VectorDatabaseService:
     def __init__(self):
         """Initialize the VectorDatabaseService.
 
-        Sets up the device for model inference and initializes the embeddings model
-        with the configured settings.
+        Sets up the OpenAI embeddings model with the configured settings.
+        No GPU required - all processing happens via OpenAI API.
         """
-        # Determine the best available device
-        self.device = self._get_optimal_device()
-
         self._db_instances: Dict[str, Optional[PGVector]] = {}
         self._bm25_retrievers: Dict[str, Optional[BM25Retriever]] = {}
 
-        logger.info("VectorDatabaseService initialized with connection pool")
+        logger.info("VectorDatabaseService initialized (using OpenAI embeddings)")
 
     @property
     @lru_cache(maxsize=1)  # noqa: B019
@@ -77,39 +73,18 @@ class VectorDatabaseService:
         """Get the embeddings model.
 
         Returns:
-            HuggingFaceEmbeddings: The embeddings model.
+            OpenAIEmbeddings: The OpenAI embeddings model.
         """
         try:
-            return HuggingFaceEmbeddings(
-                model_name=settings.EMBEDDING_MODEL,
-                model_kwargs={"device": self.device},
-                cache_folder=os.environ.get("HF_HOME"),
+            return OpenAIEmbeddings(
+                model=settings.OPENAI_EMBEDDING_MODEL,
+                openai_api_key=settings.OPENAI_API_KEY,
+                dimensions=settings.OPENAI_EMBEDDING_DIMENSIONS,
+                chunk_size=settings.EMBEDDING_BATCH_SIZE,
             )
         except Exception as e:
-            logger.error("Failed to initialize embeddings model", error=e, traceback=traceback.format_exc())
+            logger.error("Failed to initialize OpenAI embeddings model", error=e, traceback=traceback.format_exc())
             raise
-
-    def _get_optimal_device(self) -> str:
-        """Determine the optimal device for model inference.
-
-        Returns:
-            str: 'cuda' if available and supported, otherwise 'cpu'
-
-        Note:
-            This method checks for CUDA availability and falls back to CPU if
-            CUDA is not available or if an error occurs during detection.
-        """
-        try:
-            # Check if CUDA is available and has GPU devices
-            if torch.cuda.is_available() and torch.cuda.device_count() > 0:
-                logger.info("CUDA is available. Using GPU.")
-                return "cuda"
-            else:
-                logger.warning("CUDA not available. Falling back to CPU.")
-                return "cpu"
-        except Exception as e:
-            logger.error(f"Error detecting device: {e}. Defaulting to CPU.")
-            return "cpu"
 
     async def get_vstore(self, channel_id: str) -> Optional[PGVector]:
         """Get or create a vector store instance for a specific channel.

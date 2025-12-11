@@ -28,7 +28,7 @@ from langchain_core.messages import (
     messages_to_dict,
     trim_messages,
 )
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import (
     END,
@@ -79,9 +79,10 @@ class AgentGraph:
             SQLTools.tool(),
         ]
 
-        self.model = ChatGroq(
-            model_name=settings.INSTANT_LLM,
-            api_key=os.getenv("GROQ_API_KEY"),
+        self.model = ChatOpenAI(
+            model=settings.OPENAI_CHAT_MODEL,
+            api_key=settings.OPENAI_API_KEY,
+            temperature=0,
         )
         self.conn_pool = None
         self.checkpointer = None

@@ -12,7 +12,7 @@ from langchain_core.messages import (
 )
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.runnables import RunnableConfig
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from langgraph.graph import (
     END,
     StateGraph,
@@ -34,9 +34,9 @@ tools = [
     SQLTools.tool(),
 ]
 
-model = ChatGroq(
-    model_name=settings.POWERFUL_LLM,
-    api_key=os.getenv("GROQ_API_KEY"),
+model = ChatOpenAI(
+    model=settings.OPENAI_POWERFUL_MODEL,
+    api_key=settings.OPENAI_API_KEY,
     temperature=0.0,
 ).bind_tools(tools)
 

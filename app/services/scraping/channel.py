@@ -61,7 +61,17 @@ class ChannelScraper:
             # Create a new client if it doesn't exist
             if not self.client:
                 logger.debug("Creating new HTTP client in event loop", loop_id=id(current_loop))
-                self.client = httpx.AsyncClient(timeout=self.request_timeout)
+                # Set cookies to bypass YouTube consent page
+                cookies = {
+                    "CONSENT": "YES+cb.20210328-17-p0.en+FX+1000",  # Accept all cookies with higher version
+                    "SOCS": "CAISNQgEEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AwGgJlbiACGgYIgNTTpwY",  # Additional consent cookie
+                    "PREF": "hl=en&gl=US",  # Set language and location preferences
+                }
+                self.client = httpx.AsyncClient(
+                    timeout=self.request_timeout,
+                    follow_redirects=False,  # Handle redirects manually to avoid consent page
+                    cookies=cookies,
+                )
 
             return self.client
         except RuntimeError as e:
@@ -87,14 +97,35 @@ class ChannelScraper:
             # Ensure client is initialized
             client = await self._ensure_client()
 
-            # Fetch channel page
+            # Fetch channel page with headers to avoid consent page
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "DNT": "1",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+            }
+
             try:
                 response = await client.get(
                     f"https://www.youtube.com/@{channel_username}",
-                    headers={
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-                    },
+                    headers=headers,
                 )
+
+                # Handle redirects to consent page manually
+                if response.status_code in (301, 302, 303, 307, 308):
+                    redirect_url = response.headers.get("location", "")
+                    if "consent.youtube.com" in redirect_url:
+                        logger.warning("YouTube consent redirect detected, retrying with different approach",
+                                     redirect_url=redirect_url, channel_username=channel_username)
+                        # Try with the /c/ format instead
+                        response = await client.get(
+                            f"https://www.youtube.com/c/{channel_username}",
+                            headers=headers,
+                        )
+
                 response.raise_for_status()
             except httpx.HTTPError as e:
                 logger.error("HTTP error fetching channel data", error=str(e), channel_username=channel_username)
@@ -107,10 +138,18 @@ class ChannelScraper:
                     client = await self._ensure_client()
                     response = await client.get(
                         f"https://www.youtube.com/@{channel_username}",
-                        headers={
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-                        },
+                        headers=headers,
                     )
+
+                    # Handle redirects again
+                    if response.status_code in (301, 302, 303, 307, 308):
+                        redirect_url = response.headers.get("location", "")
+                        if "consent.youtube.com" in redirect_url:
+                            response = await client.get(
+                                f"https://www.youtube.com/c/{channel_username}",
+                                headers=headers,
+                            )
+
                     response.raise_for_status()
                 else:
                     raise

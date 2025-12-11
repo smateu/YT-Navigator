@@ -23,20 +23,19 @@ def get_chunk_id(chunk: Document) -> str:
 
 def get_avg_score(chunks: List[ChunkSchema], video_id: str) -> float:
     """Calculate the average score for a video."""
-    import torch
-
     relevant_chunks = [r for r in chunks if r.videoId == video_id]
     if not relevant_chunks:
         return 0.0
 
-    # Extract scores, handling both tensor and float types
+    # Extract scores, handling both numeric types
     scores = []
     for r in relevant_chunks:
         score = r.score
-        # If it's a tensor, convert to float
-        if isinstance(score, torch.Tensor):
+        # Convert to float if needed
+        if hasattr(score, 'item'):
+            # Handle tensor-like objects (if torch is used elsewhere)
             score = score.item()
-        scores.append(score)
+        scores.append(float(score))
 
     if not scores:
         return 0.0  # Safeguard against division by zero

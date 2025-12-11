@@ -12,6 +12,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     gcc \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 ARG UID=10001

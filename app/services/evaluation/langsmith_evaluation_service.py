@@ -45,11 +45,21 @@ class LangsmithEvaluationService:
 
     def __init__(self, dataset_name: str = DEFAULT_DATASET_NAME):
         """Initialize the LangsmithEvaluationService."""
-        self.client = Client()
-        self.dataset_name = dataset_name
-        self.dataset_id = self.dataset_exists(dataset_name)
-        if not self.dataset_id:
-            self.dataset_id = self.create_dataset()
+        try:
+            self.client = Client()
+            self.dataset_name = dataset_name
+            self.dataset_id = self.dataset_exists(dataset_name)
+            if not self.dataset_id:
+                self.dataset_id = self.create_dataset()
+            self.enabled = True
+            logger.info("LangSmith evaluation service initialized successfully")
+        except Exception as e:
+            logger.warning("Failed to initialize LangSmith evaluation service, continuing without it",
+                         error=str(e))
+            self.enabled = False
+            self.client = None
+            self.dataset_name = dataset_name
+            self.dataset_id = None
 
     def dataset_exists(self, dataset_name: str) -> Optional[uuid.UUID]:
         """Check if a dataset with the given name exists.
@@ -98,6 +108,10 @@ class LangsmithEvaluationService:
         graph_output: InputAgentState,
     ):
         """Add an example to the dataset."""
+        if not self.enabled:
+            logger.debug("LangSmith is disabled, skipping example addition")
+            return
+
         try:
             parsed_output = self._parse_graph_output_to_example(graph_output)
 
@@ -137,6 +151,10 @@ class LangsmithEvaluationService:
         Args:
             graph_output: The result from the agent graph execution
         """
+        if not self.enabled:
+            logger.debug("LangSmith is disabled, skipping example addition")
+            return
+
         try:
             parsed_output = self._parse_graph_output_to_example(graph_output)
 

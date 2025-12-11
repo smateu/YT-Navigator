@@ -15,8 +15,8 @@ dependencies = [
     "gunicorn==21.2.0",
     "psycopg2-binary==2.9.10",
     "asyncpg==0.30.0",
-    "torch==2.6.0",
-    "sentence-transformers==3.4.1",
+    "openai>=1.54.0",
+    "yt-dlp>=2024.12.6",
     "rank_bm25==0.2.2",
     "python-dotenv==1.0.1",
     "structlog==25.1.0",
@@ -24,13 +24,13 @@ dependencies = [
     "scrapetube==2.5.1",
     "bs4==0.0.2",
     "httpx==0.28.1",
-    "langchain-huggingface",
     "langchain-postgres",
     "langchain-community==0.3.17",
     "langgraph==0.3.5",
-    "langchain-groq==0.2.5",
+    "langchain-openai>=0.2.0",
     "langgraph-checkpoint-postgres==2.0.16",
     "markdown2==2.5.3",
+    "scikit-learn>=1.5.0",
 ]
 
 [project.optional-dependencies]
