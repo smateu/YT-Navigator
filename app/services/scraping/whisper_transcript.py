@@ -56,6 +56,19 @@ class WhisperTranscriptScraper:
                     logger.error("Failed to transcribe audio", video_id=video_id)
                     return []
 
+                # Save raw transcript for debugging
+                debug_dir = Path("logs/debug_transcripts")
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                debug_file = debug_dir / f"{video_id}_whisper_raw.txt"
+                with open(debug_file, "w", encoding="utf-8") as f:
+                    segments = transcript_data.get("segments", [])
+                    for segment in segments:
+                        start = segment.get("start", 0)
+                        end = segment.get("end", 0)
+                        text = segment.get("text", "").strip()
+                        f.write(f"{start} - {end}: {text}\n")
+                logger.info("Saved raw Whisper transcript for debugging", path=str(debug_file))
+
                 # Format the transcript into segments
                 formatted_transcript = self._format_whisper_transcript(
                     transcript_data, video_metadata
@@ -101,7 +114,7 @@ class WhisperTranscriptScraper:
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '96',
+                    'preferredquality': '32', #96
                 }],
                 'outtmpl': output_path.replace('.mp3', ''),
                 'quiet': True,
@@ -147,8 +160,7 @@ class WhisperTranscriptScraper:
             with open(audio_path, "rb") as audio_file:
                 # Request transcript with timestamps
                 transcript = self.client.audio.transcriptions.create(
-                    # model="whisper-1",
-                    model = "gpt-4o-transcribe",
+                    model="whisper-1",
                     file=audio_file,
                     response_format="verbose_json",
                     timestamp_granularities=["segment"],
